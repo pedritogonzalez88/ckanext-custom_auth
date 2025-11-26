@@ -62,7 +62,10 @@ def user_login(context: Dict[str, Any], data_dict: Dict[str, Any]) -> Dict[str, 
         return _generic_login_error()
 
     if config.get("ckanext.auth.include_frontend_login_token", False):
+        log.info("Frontend token generation enabled for user %s", user_dict.get("name"))
         user_dict = generate_token(context, user_dict, user_obj=resolved_user)
+    else:
+        log.info("Frontend token generation disabled in config")
 
     return user_dict
 
@@ -73,7 +76,7 @@ def generate_token(
     """Attach (and refresh) a frontend API token for the authenticated user."""
 
     token_context = dict(context)
-    #token_context["ignore_auth"] = True
+    token_context["ignore_auth"] = True
     token_context["user"] = user.get("name")
     token_context["auth_user"] = user.get("name")
 
@@ -93,19 +96,28 @@ def generate_token(
 
     get_action = toolkit.get_action
 
+    log.info("Starting frontend token generation for user %s", user.get("name"))
+
     try:
         api_tokens = get_action("api_token_list")(
             token_context, {"user_id": user["name"]}
         )
 
+        log.info(
+            "Found %d existing tokens for user %s", len(api_tokens), user.get("name")
+        )
+
         for token in api_tokens:
             if token.get("name") == "frontend_token":
+                log.info("Revoking existing frontend_token with id %s", token["id"])
                 get_action("api_token_revoke")(token_context, {"jti": token["id"]})
 
+        log.info("Creating new frontend_token for user %s", user.get("name"))
         frontend_token = get_action("api_token_create")(
             token_context, {"user": user["name"], "name": "frontend_token"}
         )
         user["frontend_token"] = frontend_token.get("token")
+        log.info("Frontend token successfully created for user %s", user.get("name"))
     except Exception:
         log.exception("Failed to refresh frontend token for user %s", user.get("name"))
 
