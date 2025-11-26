@@ -73,7 +73,7 @@ def generate_token(
     """Attach (and refresh) a frontend API token for the authenticated user."""
 
     token_context = dict(context)
-    token_context["ignore_auth"] = True
+    #token_context["ignore_auth"] = True
     token_context["user"] = user.get("name")
     token_context["auth_user"] = user.get("name")
 
