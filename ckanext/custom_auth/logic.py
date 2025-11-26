@@ -61,6 +61,9 @@ def user_login(context: Dict[str, Any], data_dict: Dict[str, Any]) -> Dict[str, 
     if not resolved_user or resolved_user.name != user_dict["name"]:
         return _generic_login_error()
 
+    # Refresh user_dict with resolved_user to ensure we have the most recent data
+    user_dict = resolved_user.as_dict()
+
     if config.get("ckanext.auth.include_frontend_login_token", False):
         log.info("Frontend token generation enabled for user %s", user_dict.get("name"))
         user_dict = generate_token(context, user_dict, user_obj=resolved_user)
@@ -75,50 +78,68 @@ def generate_token(
 ) -> Dict[str, Any]:
     """Attach (and refresh) a frontend API token for the authenticated user."""
 
-    token_context = dict(context)
-    token_context["ignore_auth"] = True
-    token_context["user"] = user.get("name")
-    token_context["auth_user"] = user.get("name")
+    user["frontend_token"] = None
 
+    # Get fresh user object if not provided
     resolved_user_obj = user_obj
     if resolved_user_obj is None:
         model = context.get("model")
         if model is not None:
-            # CKAN's User.get accepts name or id; try name first to avoid UUID lookups when unnecessary.
             resolved_user_obj = model.User.get(user.get("name"))
             if resolved_user_obj is None and user.get("id"):
                 resolved_user_obj = model.User.get(user["id"])
 
-    if resolved_user_obj is not None:
-        token_context["auth_user_obj"] = resolved_user_obj
-        token_context["user_obj"] = resolved_user_obj
-    user["frontend_token"] = None
+    if resolved_user_obj is None:
+        log.error(
+            "Cannot generate token: user object not found for %s", user.get("name")
+        )
+        return user
+
+    # Build a fresh context with explicit user authorization
+    token_context = {
+        "model": context.get("model"),
+        "session": context.get("session"),
+        "user": resolved_user_obj.name,
+        "auth_user_obj": resolved_user_obj,
+        "ignore_auth": True,
+    }
 
     get_action = toolkit.get_action
 
-    log.info("Starting frontend token generation for user %s", user.get("name"))
+    log.info("Starting frontend token generation for user %s", resolved_user_obj.name)
 
     try:
+        # List existing tokens
         api_tokens = get_action("api_token_list")(
-            token_context, {"user_id": user["name"]}
+            token_context, {"user": resolved_user_obj.name}
         )
 
         log.info(
-            "Found %d existing tokens for user %s", len(api_tokens), user.get("name")
+            "Found %d existing tokens for user %s",
+            len(api_tokens),
+            resolved_user_obj.name,
         )
 
+        # Revoke any existing frontend_token
         for token in api_tokens:
             if token.get("name") == "frontend_token":
                 log.info("Revoking existing frontend_token with id %s", token["id"])
                 get_action("api_token_revoke")(token_context, {"jti": token["id"]})
 
-        log.info("Creating new frontend_token for user %s", user.get("name"))
+        # Create new token
+        log.info("Creating new frontend_token for user %s", resolved_user_obj.name)
         frontend_token = get_action("api_token_create")(
-            token_context, {"user": user["name"], "name": "frontend_token"}
+            token_context, {"user": resolved_user_obj.name, "name": "frontend_token"}
         )
         user["frontend_token"] = frontend_token.get("token")
-        log.info("Frontend token successfully created for user %s", user.get("name"))
-    except Exception:
-        log.exception("Failed to refresh frontend token for user %s", user.get("name"))
+        log.info(
+            "Frontend token successfully created for user %s", resolved_user_obj.name
+        )
+    except Exception as e:
+        log.exception(
+            "Failed to refresh frontend token for user %s: %s",
+            resolved_user_obj.name,
+            str(e),
+        )
 
     return user
