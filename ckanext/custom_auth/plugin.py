@@ -5,7 +5,7 @@ from ckanext.custom_auth.logic import user_login
 
 
 
-class AuthPlugin(plugins.SingletonPlugin):
+class Custom_AuthPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
     plugins.implements(plugins.IActions)
 
