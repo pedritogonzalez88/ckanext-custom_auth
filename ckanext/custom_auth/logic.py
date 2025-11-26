@@ -73,8 +73,18 @@ def generate_token(context: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, A
     token_context = dict(context)
     token_context["ignore_auth"] = True
     token_context["user"] = user.get("name")
-    if "model" in context and user.get("id"):
-        token_context["auth_user_obj"] = context["model"].User.get(user["id"])
+    token_context["auth_user"] = user.get("name")
+
+    user_obj = None
+    model = context.get("model")
+    if model is not None:
+        # CKAN's User.get accepts name or id; try name first to avoid UUID lookups when unnecessary.
+        user_obj = model.User.get(user.get("name"))
+        if user_obj is None and user.get("id"):
+            user_obj = model.User.get(user["id"])
+
+    if user_obj is not None:
+        token_context["auth_user_obj"] = user_obj
     user["frontend_token"] = None
 
     get_action = toolkit.get_action
