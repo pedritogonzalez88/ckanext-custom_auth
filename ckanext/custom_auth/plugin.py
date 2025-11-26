@@ -1,5 +1,7 @@
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
+from ckanext.custom_auth.logic import user_login
+
 
 
 
@@ -15,7 +17,7 @@ class AuthPlugin(plugins.SingletonPlugin):
         toolkit.add_public_directory(config_, 'public')
         toolkit.add_resource('fanstatic', 'auth')
 
-    """ def get_actions(self):
+    def get_actions(self):
         return {
             'user_login': user_login
-        } """
+        }
