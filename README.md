@@ -20,7 +20,7 @@ ckanext-custom_auth allows you to reuse CKAN as the authentication backend for e
 
           pip install --no-cache-dir -e git+https://github.com/pedritogonzalez88/ckanext-custom_auth.git#egg=ckanext-custom_auth
 
-3. Enable the plugin by adding `auth` to the `ckan.plugins` setting in your CKAN configuration file (typically `/etc/ckan/default/production.ini`).
+3. Enable the plugin by adding `custom_auth` to the `ckan.plugins` setting in your CKAN configuration file (typically `/etc/ckan/default/production.ini`).
 
 4. Restart CKAN. For deployments that use Apache on Ubuntu:
 

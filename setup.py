@@ -64,7 +64,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points="""
         [ckan.plugins]
-        custom_auth=ckanext.custom_auth.plugin:Custom_AuthPlugin
+        custom_auth=ckanext.custom_auth.plugin:AuthPlugin
     """,
     # If you are changing from the default layout of your extension, you may
     # have to change the message extractors, you can read more about babel
