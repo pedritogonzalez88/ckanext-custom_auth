@@ -75,7 +75,7 @@ const loginViaCkan = async (credentials) => {
 
 Set the following option to automatically rotate a dedicated frontend token on each successful login. The token is revoked just before the new one is issued and returned as `frontend_token` in the `user_login` result:
 
-      ckanext.auth.include_frontend_login_token = True
+    ckanext.custom_auth.include_frontend_login_token = True
 
 > **Note**
 > CKAN does not revoke this token on logout. The extension revokes the previous token the next time the same user logs in.
