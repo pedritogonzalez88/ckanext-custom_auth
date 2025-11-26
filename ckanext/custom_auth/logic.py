@@ -72,6 +72,9 @@ def generate_token(context: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, A
 
     token_context = dict(context)
     token_context["ignore_auth"] = True
+    token_context["user"] = user.get("name")
+    if "model" in context and user.get("id"):
+        token_context["auth_user_obj"] = context["model"].User.get(user["id"])
     user["frontend_token"] = None
 
     get_action = toolkit.get_action
