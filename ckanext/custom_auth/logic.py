@@ -64,7 +64,14 @@ def user_login(context: Dict[str, Any], data_dict: Dict[str, Any]) -> Dict[str, 
     # Refresh user_dict with resolved_user to ensure we have the most recent data
     user_dict = resolved_user.as_dict()
 
-    if config.get("ckanext.custom_auth.include_frontend_login_token", False):
+    config_value = config.get("ckanext.custom_auth.include_frontend_login_token", False)
+    log.info(
+        "Config value for 'ckanext.custom_auth.include_frontend_login_token': %s (type: %s)",
+        config_value,
+        type(config_value).__name__,
+    )
+
+    if config_value:
         log.info("Frontend token generation enabled for user %s", user_dict.get("name"))
         user_dict = generate_token(context, user_dict, user_obj=resolved_user)
     else:
