@@ -44,9 +44,6 @@ def user_login(context: Dict[str, Any], data_dict: Dict[str, Any]) -> Dict[str, 
 
     user_dict = user_obj.as_dict()
 
-    if config.get("ckanext.auth.include_frontend_login_token", False):
-        user_dict = generate_token(context, user_dict)
-
     identity = {"login": user_dict["name"], "password": password}
 
     try:
@@ -64,10 +61,15 @@ def user_login(context: Dict[str, Any], data_dict: Dict[str, Any]) -> Dict[str, 
     if not resolved_user or resolved_user.name != user_dict["name"]:
         return _generic_login_error()
 
+    if config.get("ckanext.auth.include_frontend_login_token", False):
+        user_dict = generate_token(context, user_dict, user_obj=resolved_user)
+
     return user_dict
 
 
-def generate_token(context: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+def generate_token(
+    context: Dict[str, Any], user: Dict[str, Any], *, user_obj: Any | None = None
+) -> Dict[str, Any]:
     """Attach (and refresh) a frontend API token for the authenticated user."""
 
     token_context = dict(context)
@@ -75,16 +77,18 @@ def generate_token(context: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, A
     token_context["user"] = user.get("name")
     token_context["auth_user"] = user.get("name")
 
-    user_obj = None
-    model = context.get("model")
-    if model is not None:
-        # CKAN's User.get accepts name or id; try name first to avoid UUID lookups when unnecessary.
-        user_obj = model.User.get(user.get("name"))
-        if user_obj is None and user.get("id"):
-            user_obj = model.User.get(user["id"])
+    resolved_user_obj = user_obj
+    if resolved_user_obj is None:
+        model = context.get("model")
+        if model is not None:
+            # CKAN's User.get accepts name or id; try name first to avoid UUID lookups when unnecessary.
+            resolved_user_obj = model.User.get(user.get("name"))
+            if resolved_user_obj is None and user.get("id"):
+                resolved_user_obj = model.User.get(user["id"])
 
-    if user_obj is not None:
-        token_context["auth_user_obj"] = user_obj
+    if resolved_user_obj is not None:
+        token_context["auth_user_obj"] = resolved_user_obj
+        token_context["user_obj"] = resolved_user_obj
     user["frontend_token"] = None
 
     get_action = toolkit.get_action
